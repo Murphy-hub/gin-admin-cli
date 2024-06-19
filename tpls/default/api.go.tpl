@@ -9,17 +9,18 @@ import (
 
 {{$name := .Name}}
 
-{{with .Comment}}// {{.}}{{else}}// Defining the `{{$name}}` api.{{end}}
+{{with .Comment}}// {{$name}} {{.}}{{else}}// {{$name}} 定义 `{{$name}}` api.{{end}}
 type {{$name}} struct {
 	{{$name}}BIZ *biz.{{$name}}
 }
 
+// Query
 // @Tags {{$name}}API
-// @Security ApiKeyAuth
-// @Summary Query {{lowerSpace .Name}} list
+// @Security AccessToken
+// @Summary 查询 {{lowerSpace .Name}} 列表
 {{- if not .DisablePagination}}
-// @Param current query int true "pagination index" default(1)
-// @Param pageSize query int true "pagination size" default(10)
+// @Param current query int true "分页索引" default(1)
+// @Param pageSize query int true "分页大小" default(10)
 {{- end}}
 {{- range .Fields}}{{$fieldType := .Type}}
 {{- with .Query}}
@@ -48,9 +49,10 @@ func (a *{{$name}}) Query(c *gin.Context) {
 	util.ResPage(c, result.Data, result.PageResult)
 }
 
+// Get
 // @Tags {{$name}}API
-// @Security ApiKeyAuth
-// @Summary Get {{lowerSpace .Name}} record by ID
+// @Security AccessToken
+// @Summary 按ID获取 {{lowerSpace .Name}} 记录
 // @Param id path string true "unique id"
 // @Success 200 {object} util.ResponseResult{data=schema.{{$name}}}
 // @Failure 401 {object} util.ResponseResult
@@ -58,7 +60,12 @@ func (a *{{$name}}) Query(c *gin.Context) {
 // @Router /api/v1/{{if .FillRouterPrefix}}{{lower .Module}}/{{end}}{{lowerHyphensPlural .Name}}/{id} [get]
 func (a *{{$name}}) Get(c *gin.Context) {
 	ctx := c.Request.Context()
-	item, err := a.{{$name}}BIZ.Get(ctx, c.Param("id"))
+	idRequest := new(util.IDRequest)
+    if err := util.ParseJSON(c, idRequest); err != nil {
+        util.ResError(c, err)
+        return
+    }
+	item, err := a.{{$name}}BIZ.Get(ctx, idRequest.ID)
 	if err != nil {
 		util.ResError(c, err)
 		return
@@ -66,10 +73,11 @@ func (a *{{$name}}) Get(c *gin.Context) {
 	util.ResSuccess(c, item)
 }
 
+// Create
 // @Tags {{$name}}API
-// @Security ApiKeyAuth
-// @Summary Create {{lowerSpace .Name}} record
-// @Param body body schema.{{$name}}Form true "Request body"
+// @Security AccessToken
+// @Summary 创建 {{lowerSpace .Name}} 记录
+// @Param body body schema.{{$name}}Form true "请求体"
 // @Success 200 {object} util.ResponseResult{data=schema.{{$name}}}
 // @Failure 400 {object} util.ResponseResult
 // @Failure 401 {object} util.ResponseResult
@@ -94,11 +102,12 @@ func (a *{{$name}}) Create(c *gin.Context) {
 	util.ResSuccess(c, result)
 }
 
+// Update
 // @Tags {{$name}}API
-// @Security ApiKeyAuth
-// @Summary Update {{lowerSpace .Name}} record by ID
+// @Security AccessToken
+// @Summary 按ID更新 {{lowerSpace .Name}} 记录
 // @Param id path string true "unique id"
-// @Param body body schema.{{$name}}Form true "Request body"
+// @Param body body schema.{{$name}}Form true "请求体"
 // @Success 200 {object} util.ResponseResult
 // @Failure 400 {object} util.ResponseResult
 // @Failure 401 {object} util.ResponseResult
@@ -114,8 +123,7 @@ func (a *{{$name}}) Update(c *gin.Context) {
 		util.ResError(c, err)
 		return
 	}
-
-	err := a.{{$name}}BIZ.Update(ctx, c.Param("id"), item)
+	err := a.{{$name}}BIZ.Update(ctx, item.ID, item)
 	if err != nil {
 		util.ResError(c, err)
 		return
@@ -123,9 +131,10 @@ func (a *{{$name}}) Update(c *gin.Context) {
 	util.ResOK(c)
 }
 
+// Delete
 // @Tags {{$name}}API
-// @Security ApiKeyAuth
-// @Summary Delete {{lowerSpace .Name}} record by ID
+// @Security AccessToken
+// @Summary 按ID删除 {{lowerSpace .Name}} 记录
 // @Param id path string true "unique id"
 // @Success 200 {object} util.ResponseResult
 // @Failure 401 {object} util.ResponseResult
@@ -133,7 +142,12 @@ func (a *{{$name}}) Update(c *gin.Context) {
 // @Router /api/v1/{{if .FillRouterPrefix}}{{lower .Module}}/{{end}}{{lowerHyphensPlural .Name}}/{id} [delete]
 func (a *{{$name}}) Delete(c *gin.Context) {
 	ctx := c.Request.Context()
-	err := a.{{$name}}BIZ.Delete(ctx, c.Param("id"))
+	idRequest := new(util.IDRequest)
+    if err := util.ParseJSON(c, idRequest); err != nil {
+        util.ResError(c, err)
+        return
+    }
+	err := a.{{$name}}BIZ.Delete(ctx, idRequest.ID)
 	if err != nil {
 		util.ResError(c, err)
 		return

@@ -30,12 +30,12 @@ func main() {
 	zap.ReplaceGlobals(logger)
 
 	app := cli.NewApp()
-	app.Name = "gin-admin-cli"
+	app.Name = "gin-web-cli"
 	app.Version = VERSION
-	app.Usage = "A command line tool for [gin-admin](https://github.com/LyricTian/gin-admin)."
+	app.Usage = "A command line tool for [gin-web](https://github.com/LyricTian/gin-admin)."
 	app.Authors = append(app.Authors, &cli.Author{
-		Name:  "LyricTian",
-		Email: "tiannianshou@gmail.com",
+		Name:  "ZhangShuai",
+		Email: "shuai.zhang@plaso.me",
 	})
 	app.Commands = []*cli.Command{
 		cmd.Version(VERSION),

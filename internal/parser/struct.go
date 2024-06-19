@@ -20,10 +20,12 @@ const (
 	StructPackageBIZ    = "biz"
 	StructPackageDAL    = "dal"
 	StructPackageSchema = "schema"
+	StructPackageEntity = "entity"
 )
 
 var StructPackages = []string{
 	StructPackageSchema,
+	StructPackageEntity,
 	StructPackageDAL,
 	StructPackageBIZ,
 	StructPackageAPI,
@@ -34,6 +36,7 @@ var StructPackageTplPaths = map[string]string{
 	StructPackageBIZ:    FileForModuleBiz,
 	StructPackageDAL:    FileForModuleDAL,
 	StructPackageSchema: FileForModuleSchema,
+	StructPackageEntity: FileForModuleEntity,
 }
 
 func GetStructAPIName(structName string) string {

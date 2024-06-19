@@ -17,13 +17,13 @@ import (
 {{$includeStatus := .Include.Status}}
 {{$treeTpl := eq .TplType "tree"}}
 
-{{with .Comment}}// {{.}}{{else}}// Defining the `{{$name}}` business logic.{{end}}
+{{with .Comment}}// {{$name}} {{.}}{{else}}// {{$name}} 定义 `{{$name}}` 业务逻辑.{{end}}
 type {{$name}} struct {
 	Trans       *util.Trans
 	{{$name}}DAL *dal.{{$name}}
 }
 
-// Query {{lowerSpacePlural .Name}} from the data access object based on the provided parameters and options.
+// Query 根据提供的参数和选项，从数据访问对象查询 {{lowerSpacePlural .Name}}
 func (a *{{$name}}) Query(ctx context.Context, params schema.{{$name}}QueryParam) (*schema.{{$name}}QueryResult, error) {
 	params.Pagination = {{if .DisablePagination}}false{{else}}true{{end}}
 
@@ -54,7 +54,7 @@ func (a *{{$name}}) appendChildren(ctx context.Context, data schema.{{plural .Na
 		return data, nil
 	}
 
-	existsInData := func(id string) bool {
+	existsInData := func(id int) bool {
 		for _, item := range data {
 			if item.ID == id {
 				return true
@@ -99,8 +99,8 @@ func (a *{{$name}}) appendChildren(ctx context.Context, data schema.{{plural .Na
 }
 {{- end}}
 
-// Get the specified {{lowerSpace .Name}} from the data access object.
-func (a *{{$name}}) Get(ctx context.Context, id string) (*schema.{{$name}}, error) {
+// Get 从数据访问对象中获取指定的 {{lowerSpace .Name}}
+func (a *{{$name}}) Get(ctx context.Context, id int) (*schema.{{$name}}, error) {
 	{{lowerCamel $name}}, err := a.{{$name}}DAL.Get(ctx, id)
 	if err != nil {
 		return nil, err
@@ -110,11 +110,10 @@ func (a *{{$name}}) Get(ctx context.Context, id string) (*schema.{{$name}}, erro
 	return {{lowerCamel $name}}, nil
 }
 
-// Create a new {{lowerSpace .Name}} in the data access object.
+// Create 在数据访问对象中创建新的 {{lowerSpace .Name}}
 func (a *{{$name}}) Create(ctx context.Context, formItem *schema.{{$name}}Form) (*schema.{{$name}}, error) {
 	{{lowerCamel $name}} := &schema.{{$name}}{
-		{{if $includeID}}ID:          util.NewXID(),{{end}}
-		{{if $includeCreatedAt}}CreatedAt:   time.Now(),{{end}}
+		{{if $includeCreatedAt}}CreatedAt:   time.Now().Unix() * 1000,{{end}}
 	}
 
 	{{- range .Fields}}
@@ -150,11 +149,13 @@ func (a *{{$name}}) Create(ctx context.Context, formItem *schema.{{$name}}Form) 
 	if err := formItem.FillTo({{lowerCamel $name}}); err != nil {
 		return nil, err
 	}
-
+    {{lowerCamel $name}}.ID = 0
 	err := a.Trans.Exec(ctx, func(ctx context.Context) error {
-		if err := a.{{$name}}DAL.Create(ctx, {{lowerCamel $name}}); err != nil {
+		item, err := a.{{$name}}DAL.Create(ctx, *{{lowerCamel $name}});
+		if err != nil {
 			return err
 		}
+		{{lowerCamel $name}} = item
 		return nil
 	})
 	if err != nil {
@@ -163,8 +164,11 @@ func (a *{{$name}}) Create(ctx context.Context, formItem *schema.{{$name}}Form) 
 	return {{lowerCamel $name}}, nil
 }
 
-// Update the specified {{lowerSpace .Name}} in the data access object.
-func (a *{{$name}}) Update(ctx context.Context, id string, formItem *schema.{{$name}}Form) error {
+// Update 更新数据访问对象中指定的 {{lowerSpace .Name}}
+func (a *{{$name}}) Update(ctx context.Context, id int, formItem *schema.{{$name}}Form) error {
+    if id == 0 {
+        return errors.NotFound("", "{{titleSpace $name}} not found")
+    }
 	{{lowerCamel $name}}, err := a.{{$name}}DAL.Get(ctx, id)
 	if err != nil {
 		return err
@@ -233,7 +237,7 @@ func (a *{{$name}}) Update(ctx context.Context, id string, formItem *schema.{{$n
     {{if $includeUpdatedAt}}{{lowerCamel $name}}.UpdatedAt = time.Now(){{end}}
 	
 	return a.Trans.Exec(ctx, func(ctx context.Context) error {
-		if err := a.{{$name}}DAL.Update(ctx, {{lowerCamel $name}}); err != nil {
+		if err := a.{{$name}}DAL.Update(ctx, *{{lowerCamel $name}}); err != nil {
 			return err
 		}
 
@@ -260,8 +264,8 @@ func (a *{{$name}}) Update(ctx context.Context, id string, formItem *schema.{{$n
 	})
 }
 
-// Delete the specified {{lowerSpace .Name}} from the data access object.
-func (a *{{$name}}) Delete(ctx context.Context, id string) error {
+// Delete 从数据访问对象中删除指定的 {{lowerSpace .Name}}
+func (a *{{$name}}) Delete(ctx context.Context, id int) error {
 	{{- if $treeTpl}}
 	{{lowerCamel $name}}, err := a.{{$name}}DAL.Get(ctx, id)
 	if err != nil {

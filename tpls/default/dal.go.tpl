@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"{{.UtilImportPath}}"
+	"{{.ModuleImportPath}}/entity"
 	"{{.ModuleImportPath}}/schema"
 	"{{.RootImportPath}}/pkg/errors"
 	"gorm.io/gorm"
@@ -14,17 +15,17 @@ import (
 {{$includeStatus := .Include.Status}}
 {{$treeTpl := eq .TplType "tree"}}
 
-// Get {{lowerSpace .Name}} storage instance
+// Get{{$name}}DB 获取 {{lowerSpace .Name}} 存储实例
 func Get{{$name}}DB(ctx context.Context, defDB *gorm.DB) *gorm.DB {
-	return util.GetDB(ctx, defDB).Model(new(schema.{{$name}}))
+	return util.GetDB(ctx, defDB).Model(new(entity.{{$name}}))
 }
 
-{{with .Comment}}// {{.}}{{else}}// Defining the `{{$name}}` data access object.{{end}}
+{{with .Comment}}// {{$name}} {{.}}{{else}}// `{{$name}}` 定义 `{{$name}}` 数据访问对象。{{end}}
 type {{$name}} struct {
 	DB *gorm.DB
 }
 
-// Query {{lowerSpacePlural .Name}} from the database based on the provided parameters and options.
+// Query 根据提供的参数和选项从数据库中查询 {{lowerSpacePlural .Name}}
 func (a *{{$name}}) Query(ctx context.Context, params schema.{{$name}}QueryParam, opts ...schema.{{$name}}QueryOptions) (*schema.{{$name}}QueryResult, error) {
 	var opt schema.{{$name}}QueryOptions
 	if len(opts) > 0 {
@@ -47,7 +48,7 @@ func (a *{{$name}}) Query(ctx context.Context, params schema.{{$name}}QueryParam
     {{- end}}
     {{- end}}
 
-	var list schema.{{plural .Name}}
+	var list entity.{{plural .Name}}
 	pageResult, err := util.WrapPageQuery(ctx, db, params.PaginationParam, opt.QueryOptions, &list)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -55,30 +56,30 @@ func (a *{{$name}}) Query(ctx context.Context, params schema.{{$name}}QueryParam
 
 	queryResult := &schema.{{$name}}QueryResult{
 		PageResult: pageResult,
-		Data:       list,
+		Data:       list.ToSchema{{$name}}s(),
 	}
 	return queryResult, nil
 }
 
-// Get the specified {{lowerSpace .Name}} from the database.
-func (a *{{$name}}) Get(ctx context.Context, id string, opts ...schema.{{$name}}QueryOptions) (*schema.{{$name}}, error) {
+// Get 从数据库中获取指定的 {{lowerSpacePlural .Name}}
+func (a *{{$name}}) Get(ctx context.Context, id int, opts ...schema.{{$name}}QueryOptions) (*schema.{{$name}}, error) {
 	var opt schema.{{$name}}QueryOptions
 	if len(opts) > 0 {
 		opt = opts[0]
 	}
 
-	item := new(schema.{{$name}})
+	item := new(entity.{{$name}})
 	ok, err := util.FindOne(ctx, Get{{$name}}DB(ctx, a.DB).Where("id=?", id), opt.QueryOptions, item)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	} else if !ok {
 		return nil, nil
 	}
-	return item, nil
+	return item.ToSchema{{$name}}(), nil
 }
 
-// Exists checks if the specified {{lowerSpace .Name}} exists in the database.
-func (a *{{$name}}) Exists(ctx context.Context, id string) (bool, error) {
+// Exists 检查数据库中是否存在指定的 {{lowerSpace .Name}}
+func (a *{{$name}}) Exists(ctx context.Context, id int) (bool, error) {
 	ok, err := util.Exists(ctx, Get{{$name}}DB(ctx, a.DB).Where("id=?", id))
 	return ok, errors.WithStack(err)
 }
@@ -86,13 +87,13 @@ func (a *{{$name}}) Exists(ctx context.Context, id string) (bool, error) {
 {{- range .Fields}}
 {{- if .Unique}}
 {{- if $treeTpl}}
-// Exist checks if the specified {{lowerSpace .Name}} exists in the database.
-func (a *{{$name}}) Exists{{.Name}}(ctx context.Context, parentID string, {{lowerCamel .Name}} string) (bool, error) {
+// Exists 检查数据库中是否存在指定的 {{lowerSpace .Name}}
+func (a *{{$name}}) Exists{{.Name}}(ctx context.Context, parentID int, {{lowerCamel .Name}} string) (bool, error) {
 	ok, err := util.Exists(ctx, Get{{$name}}DB(ctx, a.DB).Where("parent_id=? AND {{lowerUnderline .Name}}=?", parentID, {{lowerCamel .Name}}))
 	return ok, errors.WithStack(err)
 }
 {{- else}}
-// Exist checks if the specified {{lowerSpace .Name}} exists in the database.
+// Exists 检查数据库中是否存在指定的 {{lowerSpace .Name}}
 func (a *{{$name}}) Exists{{.Name}}(ctx context.Context, {{lowerCamel .Name}} string) (bool, error) {
 	ok, err := util.Exists(ctx, Get{{$name}}DB(ctx, a.DB).Where("{{lowerUnderline .Name}}=?", {{lowerCamel .Name}}))
 	return ok, errors.WithStack(err)
@@ -101,33 +102,35 @@ func (a *{{$name}}) Exists{{.Name}}(ctx context.Context, {{lowerCamel .Name}} st
 {{- end}}
 {{- end}}
 
-// Create a new {{lowerSpace .Name}}.
-func (a *{{$name}}) Create(ctx context.Context, item *schema.{{$name}}) error {
-	result := Get{{$name}}DB(ctx, a.DB).Create(item)
+// Create 创建一个新的 {{lowerSpace .Name}}
+func (a *{{$name}}) Create(ctx context.Context, item schema.{{$name}}) (*schema.{{$name}}, error) {
+    sitem := entity.Schema{{$name}}(item).To{{$name}}()
+	result := Get{{$name}}DB(ctx, a.DB).Create(sitem)
+	return sitem.ToSchema{{$name}}(), errors.WithStack(result.Error)
+}
+
+// Update 更新数据库中指定的 {{lowerSpace .Name}}
+func (a *{{$name}}) Update(ctx context.Context, item schema.{{$name}}) error {
+    eitem := entity.Schema{{$name}}(item).To{{$name}}()
+	result := Get{{$name}}DB(ctx, a.DB).Where("id=?", item.ID).Select("*"){{if $includeCreatedAt}}.Omit("created_time"){{end}}.Updates(eitem)
 	return errors.WithStack(result.Error)
 }
 
-// Update the specified {{lowerSpace .Name}} in the database.
-func (a *{{$name}}) Update(ctx context.Context, item *schema.{{$name}}) error {
-	result := Get{{$name}}DB(ctx, a.DB).Where("id=?", item.ID).Select("*"){{if $includeCreatedAt}}.Omit("created_at"){{end}}.Updates(item)
-	return errors.WithStack(result.Error)
-}
-
-// Delete the specified {{lowerSpace .Name}} from the database.
-func (a *{{$name}}) Delete(ctx context.Context, id string) error {
-	result := Get{{$name}}DB(ctx, a.DB).Where("id=?", id).Delete(new(schema.{{$name}}))
+// Delete 从数据库中删除指定的 {{lowerSpace .Name}}
+func (a *{{$name}}) Delete(ctx context.Context, id int) error {
+	result := Get{{$name}}DB(ctx, a.DB).Where("id=?", id).Delete(new(entity.{{$name}}))
 	return errors.WithStack(result.Error)
 }
 
 {{- if $treeTpl}}
-// Updates the parent path of the specified {{lowerSpace .Name}}.
-func (a *{{$name}}) UpdateParentPath(ctx context.Context, id, parentPath string) error {
+// UpdateParentPath 更新指定的 {{lowerSpace .Name}} 的父路径。
+func (a *{{$name}}) UpdateParentPath(ctx context.Context, id int, parentPath string) error {
 	result := Get{{$name}}DB(ctx, a.DB).Where("id=?", id).Update("parent_path", parentPath)
 	return errors.WithStack(result.Error)
 }
 
 {{- if $includeStatus}}
-// Updates the status of all {{lowerPlural .Name}} whose parent path starts with the provided parent path.
+// UpdateStatusByParentPath 更新父路径以所提供的父路径开头的所有 {{lowerSpace .Name}} 的状态。
 func (a *{{$name}}) UpdateStatusByParentPath(ctx context.Context, parentPath, status string) error {
 	result := Get{{$name}}DB(ctx, a.DB).Where("parent_path like ?", parentPath+"%").Update("status", status)
 	return errors.WithStack(result.Error)

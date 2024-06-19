@@ -45,8 +45,8 @@ func (a *S) Format() *S {
 		var fields []*Field
 		fields = append(fields, &Field{
 			Name:    "ID",
-			Type:    "string",
-			GormTag: "size:20;primaryKey;",
+			Type:    "int",
+			GormTag: "primaryKey;",
 			Comment: "Unique ID",
 		})
 		fields = append(fields, a.Fields...)
@@ -54,8 +54,8 @@ func (a *S) Format() *S {
 		if a.TplType == "tree" {
 			fields = append(fields, &Field{
 				Name:    "ParentID",
-				Type:    "string",
-				GormTag: "size:20;index;",
+				Type:    "int",
+				GormTag: "index;",
 				Comment: "Parent ID",
 				Query:   &FieldQuery{},
 				Form:    &FieldForm{},
@@ -80,15 +80,15 @@ func (a *S) Format() *S {
 		}
 
 		fields = append(fields, &Field{
-			Name:    "CreatedAt",
-			Type:    "time.Time",
+			Name:    "CreatedTime",
+			Type:    "int64",
 			GormTag: "index;",
 			Comment: "Create time",
 			Order:   "DESC",
 		})
 		fields = append(fields, &Field{
-			Name:    "UpdatedAt",
-			Type:    "time.Time",
+			Name:    "UpdatedTime",
+			Type:    "int64",
 			GormTag: "index;",
 			Comment: "Update time",
 		})

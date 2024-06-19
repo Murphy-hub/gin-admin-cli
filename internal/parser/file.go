@@ -15,6 +15,7 @@ const (
 	FileForModuleBiz    = "{{lower .ModuleName}}/biz/{{lowerUnderline .StructName}}.biz.go"
 	FileForModuleDAL    = "{{lower .ModuleName}}/dal/{{lowerUnderline .StructName}}.dal.go"
 	FileForModuleSchema = "{{lower .ModuleName}}/schema/{{lowerUnderline .StructName}}.go"
+	FileForModuleEntity = "{{lower .ModuleName}}/entity/{{lowerUnderline .StructName}}.go"
 )
 
 func ParseFilePathFromTpl(moduleName, structName string, tpl string) (string, error) {

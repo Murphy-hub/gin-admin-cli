@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"time"
 
 	{{if .TableName}}"{{.RootImportPath}}/internal/config"{{end}}
 	"{{.UtilImportPath}}"
@@ -11,20 +10,14 @@ import (
 {{$includeSequence := .Include.Sequence}}
 {{$treeTpl := eq .TplType "tree"}}
 
-{{with .Comment}}// {{.}}{{else}}// Defining the `{{$name}}` struct.{{end}}
+{{with .Comment}}// {{$name}} {{.}}{{else}}// 定义 `{{$name}}` 结构.{{end}}
 type {{$name}} struct {
     {{- range .Fields}}{{$fieldName := .Name}}
-	{{$fieldName}} {{.Type}} `json:"{{.JSONTag}}"{{with .GormTag}} gorm:"{{.}}"{{end}}{{with .CustomTag}} {{raw .}}{{end}}`{{with .Comment}}// {{.}}{{end}}
+	{{$fieldName}} {{.Type}} `json:"{{.JSONTag}}"{{with .CustomTag}} {{raw .}}{{end}}`{{with .Comment}}// {{.}}{{end}}
 	{{- end}}
 }
 
-{{- if .TableName}}
-func (a {{$name}}) TableName() string {
-	return config.C.FormatTableName("{{.TableName}}")
-}
-{{- end}}
-
-// Defining the query parameters for the `{{$name}}` struct.
+// {{$name}}QueryParam 为`{{$name}}`结构定义查询参数。
 type {{$name}}QueryParam struct {
 	util.PaginationParam
 	{{if $treeTpl}}InIDs []string `form:"-"`{{- end}}
@@ -35,18 +28,18 @@ type {{$name}}QueryParam struct {
 	{{- end}}
 }
 
-// Defining the query options for the `{{$name}}` struct.
+// {{$name}}QueryOptions 定义 `{{$name}}` 结构的查询选项
 type {{$name}}QueryOptions struct {
 	util.QueryOptions
 }
 
-// Defining the query result for the `{{$name}}` struct.
+// {{$name}}QueryResult 定义 `{{$name}}` 结构的查询结果
 type {{$name}}QueryResult struct {
 	Data       {{plural .Name}}
 	PageResult *util.PaginationResult
 }
 
-// Defining the slice of `{{$name}}` struct.
+// {{plural .Name}} 定义 `{{$name}}` 结构的切片
 type {{plural .Name}} []*{{$name}}
 
 {{- if $includeSequence}}
@@ -120,8 +113,9 @@ func (a {{plural .Name}}) ToTree() {{plural .Name}} {
 }
 {{- end}}
 
-// Defining the data structure for creating a `{{$name}}` struct.
+// {{$name}}Form 定义用于创建 `{{$name}}` 结构的数据结构。
 type {{$name}}Form struct {
+    ID int `json:"id"`
 	{{- range .Fields}}{{$fieldName := .Name}}{{$type :=.Type}}
 	{{- with .Form}}
 	{{.Name}} {{$type}} `json:"{{.JSONTag}}"{{with .BindingTag}} binding:"{{.}}"{{end}}{{with .CustomTag}} {{raw .}}{{end}}`{{with .Comment}}// {{.}}{{end}}
@@ -129,12 +123,12 @@ type {{$name}}Form struct {
 	{{- end}}
 }
 
-// A validation function for the `{{$name}}Form` struct.
+// Validate `{{$name}}Form` 结构的验证函数。
 func (a *{{$name}}Form) Validate() error {
 	return nil
 }
 
-// Convert `{{$name}}Form` to `{{$name}}` object.
+// FillTo 将 `{{$name}}Form` 转换为 `{{$name}}` 对象。
 func (a *{{$name}}Form) FillTo({{lowerCamel $name}} *{{$name}}) error {
 	{{- range .Fields}}{{$fieldName := .Name}}
 	{{- with .Form}}

@@ -38,7 +38,7 @@ func (v *astModuleMainVisitor) Visit(node ast.Node) ast.Visitor {
 
 func (v *astModuleMainVisitor) modifyModuleImport(x *ast.GenDecl) {
 	if v.args.Flag&AstFlagGen != 0 {
-		for _, pkgName := range []string{StructPackageAPI, StructPackageSchema} {
+		for _, pkgName := range []string{StructPackageAPI, StructPackageSchema, StructPackageEntity} {
 			findIndex := -1
 			modulePath := GetModuleImportPath(v.args.Dir, v.args.ModulePath, v.args.ModuleName) + "/" + pkgName
 			for i, spec := range x.Specs {
@@ -131,7 +131,7 @@ func (v *astModuleMainVisitor) modifyAutoMigrate(x *ast.FuncDecl) {
 				continue
 			}
 
-			if selector.Sel.Name == v.args.StructName && selector.X.(*ast.Ident).Name == StructPackageSchema {
+			if selector.Sel.Name == v.args.StructName && selector.X.(*ast.Ident).Name == StructPackageEntity {
 				findIndex = i
 				break
 			}
@@ -145,7 +145,7 @@ func (v *astModuleMainVisitor) modifyAutoMigrate(x *ast.FuncDecl) {
 				Fun: ast.NewIdent("new"),
 				Args: []ast.Expr{
 					&ast.SelectorExpr{
-						X:   ast.NewIdent(StructPackageSchema),
+						X:   ast.NewIdent(StructPackageEntity),
 						Sel: ast.NewIdent(v.args.StructName),
 					},
 				},
@@ -324,7 +324,7 @@ func (v *astModuleWireVisitor) modifyNewSet(x *ast.GenDecl) {
 	if v.args.Flag&AstFlagGen != 0 {
 		genPackagesMap := make(map[string]bool)
 		for _, p := range v.args.GenPackages {
-			if p == StructPackageSchema {
+			if p == StructPackageSchema || p == StructPackageEntity {
 				continue
 			}
 			genPackagesMap[p] = true
